@@ -10,35 +10,59 @@ struct Args {
     time: String,
 }
 
-fn main() -> Result<()> {
-    let args = Args::parse();
-    let timestamp = args
-        .time
+fn convert_input(input: &str) -> Result<i64, std::num::ParseIntError> {
+    input
         .chars()
         .filter(|&c| c.is_ascii_digit())
         .collect::<String>()
-        .parse::<i64>();
-    let time = match timestamp {
-        Ok(time) => time,
+        .parse::<i64>()
+}
+
+fn get_timestamp_from_input(
+    timestamp: Result<i64, std::num::ParseIntError>,
+) -> Result<i64, anyhow::Error> {
+    match timestamp {
+        Ok(time) => Ok(time),
         Err(err) => bail!("{}, timestamp should fit in 64-bit number", err),
-    };
-    let datetime = match DateTime::from_timestamp(time, 0) {
-        Some(d) => d,
+    }
+}
+
+fn get_datetime_from_timestamp(timestamp: i64) -> Result<DateTime<chrono::Utc>, anyhow::Error> {
+    match DateTime::from_timestamp(timestamp, 0) {
+        Some(d) => Ok(d),
         None => bail!(
             "couldn't convert {} to timestamp, since it's an out-of-range number of seconds",
-            time
+            timestamp
         ),
-    };
-    println!(
+    }
+}
+
+fn produce_output_string(time: &str, timestamp: i64, datetime: &DateTime<chrono::Utc>) -> String {
+    format!(
         "{:20} {}\n{:20} {}\n{:20} {}\n{:20} {}",
         "Read:".cyan(),
-        args.time.blue(),
+        time.blue(),
         "As timestamp:".cyan(),
-        time.to_string().blue(),
+        timestamp.to_string().blue(),
         "In UTC:".cyan(),
         datetime.to_string().blue(),
         "In Local Timezone:".cyan(),
         datetime.with_timezone(&Local).to_string().blue()
-    );
+    )
+}
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+    let timestamp = convert_input(&args.time);
+    let time = get_timestamp_from_input(timestamp)?;
+    let datetime = get_datetime_from_timestamp(time)?;
+    println!("{}", produce_output_string(&args.time, time, &datetime));
     Ok(())
+}
+
+mod test {
+    #[test]
+    fn test_invalid_arg() {
+        todo!();
+    }
 }
