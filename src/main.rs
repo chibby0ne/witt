@@ -1,3 +1,4 @@
+use anyhow::{bail, Result};
 use chrono::{DateTime, Local};
 use clap::Parser;
 use colored::Colorize;
@@ -9,7 +10,7 @@ struct Args {
     time: String,
 }
 
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
     let timestamp = args
         .time
@@ -19,9 +20,15 @@ fn main() {
         .parse::<i64>();
     let time = match timestamp {
         Ok(time) => time,
-        Err(err) => return eprintln!("This wasn't meant to be. Error: {}", err),
+        Err(err) => bail!("{}, timestamp should fit in 64-bit number", err),
     };
-    let datetime = DateTime::from_timestamp(time, 0).unwrap();
+    let datetime = match DateTime::from_timestamp(time, 0) {
+        Some(d) => d,
+        None => bail!(
+            "couldn't convert {} to timestamp, since it's an out-of-range number of seconds",
+            time
+        ),
+    };
     println!(
         "{:20} {}\n{:20} {}\n{:20} {}\n{:20} {}",
         "Read:".cyan(),
@@ -33,4 +40,5 @@ fn main() {
         "In Local Timezone:".cyan(),
         datetime.with_timezone(&Local).to_string().blue()
     );
+    Ok(())
 }
