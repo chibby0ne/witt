@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Local};
 use clap::Parser;
 use colored::Colorize;
@@ -7,10 +7,17 @@ use colored::Colorize;
 #[command(version, about, long_about = None)]
 struct Args {
     /// Time as timestamp in utc
-    time: String,
+    times: Vec<String>,
 }
 
-fn convert_input(input: &str) -> Result<i64, std::num::ParseIntError> {
+fn convert_vector_inputs(times: &[String]) -> Vec<Result<i64, anyhow::Error>> {
+    times
+        .iter()
+        .map(|x| get_timestamp_from_input(convert_string_timestamp(x)))
+        .collect()
+}
+
+fn convert_string_timestamp(input: &str) -> Result<i64, std::num::ParseIntError> {
     input
         .chars()
         .filter(|&c| c.is_ascii_digit())
@@ -23,18 +30,37 @@ fn get_timestamp_from_input(
 ) -> Result<i64, anyhow::Error> {
     match timestamp {
         Ok(time) => Ok(time),
-        Err(err) => bail!("{}, timestamp should fit in 64-bit number", err),
+        Err(err) => Err(anyhow!("{}, timestamp should fit in 64-bit number", err)),
     }
+}
+
+fn convert_vector_timestamp_to_datetime(
+    v: &[Result<i64, anyhow::Error>],
+) -> Vec<Result<DateTime<chrono::Utc>, anyhow::Error>> {
+    v.iter()
+        .map(|x| match x {
+            Ok(timestamp) => get_datetime_from_timestamp(*timestamp),
+            Err(e) => Err(anyhow!("{}", e)),
+        })
+        .collect()
 }
 
 fn get_datetime_from_timestamp(timestamp: i64) -> Result<DateTime<chrono::Utc>, anyhow::Error> {
     match DateTime::from_timestamp(timestamp, 0) {
         Some(d) => Ok(d),
-        None => bail!(
+        None => Err(anyhow!(
             "couldn't convert {} to timestamp, since it's an out-of-range number of seconds",
             timestamp
-        ),
+        )),
     }
+}
+
+fn form_first_line(times: &[&str]) -> String {
+    let mut res = String::new();
+    for s in times.iter().take(times.len() - 1) {
+        res.push_str(&format!("{:15}", *s));
+    }
+    res
 }
 
 fn produce_output_string(time: &str, timestamp: i64, datetime: &DateTime<chrono::Utc>) -> String {
@@ -53,13 +79,15 @@ fn produce_output_string(time: &str, timestamp: i64, datetime: &DateTime<chrono:
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let time = convert_input(&args.time);
-    let timestamp = get_timestamp_from_input(time)?;
-    let datetime = get_datetime_from_timestamp(timestamp)?;
-    println!(
-        "{}",
-        produce_output_string(&args.time, timestamp, &datetime)
-    );
+    let times = convert_vector_inputs(&args.times);
+    let _datetimes = convert_vector_timestamp_to_datetime(&times);
+    let mut _s = String::new();
+    // let timestamp = get_timestamp_from_input(times[0])?;
+    // let datetime = get_datetime_from_timestamp(timestamp)?;
+    // println!(
+    //     "{}",
+    //     produce_output_string(&args.times, timestamp, &datetime)
+    // );
     Ok(())
 }
 
@@ -120,14 +148,14 @@ mod test {
     #[test]
     fn test_convert_input_valid() {
         let timestamp = "1_213_123_831_231";
-        let output = convert_input(timestamp);
+        let output = convert_string_timestamp(timestamp);
         assert!(output.is_ok_and(|x| x == 1213123831231));
     }
 
     #[test]
     fn test_convert_input_invalid() {
         let input = "121312383123100000000";
-        let output = convert_input(input);
+        let output = convert_string_timestamp(input);
         assert!(output.is_err_and(|x| *x.kind() == std::num::IntErrorKind::PosOverflow));
     }
 }
