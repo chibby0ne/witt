@@ -56,7 +56,7 @@ fn get_datetime_from_timestamp(timestamp: i64) -> Result<DateTime<chrono::Utc>, 
 }
 
 fn form_first_line(length: usize) -> String {
-    let mut res = format!("{:20}", "Item".cyan());
+    let mut res = format!("{:20}", "Item:".cyan());
     for i in 0..length {
         res.push_str(&format!("{:30}", i.to_string().white()));
     }
