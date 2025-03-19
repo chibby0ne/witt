@@ -48,10 +48,7 @@ fn convert_vector_timestamp_to_datetime(
 fn get_datetime_from_timestamp(timestamp: i64) -> Result<DateTime<chrono::Utc>, anyhow::Error> {
     match DateTime::from_timestamp(timestamp, 0) {
         Some(d) => Ok(d),
-        None => Err(anyhow!(
-            "couldn't convert {} to timestamp, since it's an out-of-range number of seconds",
-            timestamp
-        )),
+        None => Err(anyhow!("invalid number of seconds")),
     }
 }
 
@@ -77,10 +74,7 @@ fn form_third_line(timestamps: &[Result<i64, anyhow::Error>]) -> String {
     for s in timestamps {
         match s {
             Ok(timestamp) => res.push_str(&format!("{:30}", timestamp.to_string().blue())),
-            Err(_) => res.push_str(&format!(
-                "{:30}",
-                "Couldn't interpret value".to_string().blue()
-            )),
+            Err(e) => res.push_str(&format!("{:30}", e.to_string().blue())),
         }
     }
     res
@@ -94,10 +88,7 @@ fn form_fourth_and_fifth_line(
     for s in datetimes {
         match s {
             Ok(datetime) => res.push_str(&format!("{:30}", datetime.to_string().blue())),
-            Err(_) => res.push_str(&format!(
-                "{:30}",
-                "Couldn't interpret value".to_string().blue()
-            )),
+            Err(e) => res.push_str(&format!("{:30}", e.to_string().blue())),
         }
     }
     res.push('\n');
@@ -108,10 +99,7 @@ fn form_fourth_and_fifth_line(
                 "{:30}",
                 datetime.with_timezone(&Local).to_string().blue()
             )),
-            Err(_) => res.push_str(&format!(
-                "{:30}",
-                "Couldn't interpret value".to_string().blue()
-            )),
+            Err(e) => res.push_str(&format!("{:30}", e.to_string().blue())),
         }
     }
     res
@@ -136,7 +124,6 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let times = convert_vector_inputs(&args.times);
     let datetimes = convert_vector_timestamp_to_datetime(&times);
-    let mut _s = String::new();
     println!("{}", form_first_line(datetimes.len()));
     println!("{}", form_second_line(&args.times));
     println!("{}", form_third_line(&times));
