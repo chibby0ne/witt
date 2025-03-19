@@ -4,7 +4,7 @@ use clap::Parser;
 use colored::Colorize;
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(version, about, long_about = None, arg_required_else_help(true))]
 struct Args {
     /// Time as timestamp in utc
     times: Vec<String>,
@@ -55,14 +55,69 @@ fn get_datetime_from_timestamp(timestamp: i64) -> Result<DateTime<chrono::Utc>, 
     }
 }
 
-fn form_first_line(times: &[&str]) -> String {
-    let mut res = String::new();
-    for s in times.iter().take(times.len() - 1) {
-        res.push_str(&format!("{:15}", *s));
+fn form_first_line(length: usize) -> String {
+    let mut res = format!("{:20}", "Item".cyan());
+    for i in 0..length {
+        res.push_str(&format!("{:30}", i.to_string().white()));
     }
     res
 }
 
+fn form_second_line(times: &[String]) -> String {
+    let mut res = format!("{:20}", "Read:".cyan());
+    for s in times {
+        res.push_str(&format!("{:30}", s.blue()));
+    }
+    res
+}
+
+#[allow(dead_code)]
+fn form_third_line(timestamps: &[Result<i64, anyhow::Error>]) -> String {
+    let mut res = format!("{:20}", "As timestamp:".cyan());
+    for s in timestamps {
+        match s {
+            Ok(timestamp) => res.push_str(&format!("{:30}", timestamp.to_string().blue())),
+            Err(_) => res.push_str(&format!(
+                "{:30}",
+                "Couldn't interpret value".to_string().blue()
+            )),
+        }
+    }
+    res
+}
+
+#[allow(dead_code)]
+fn form_fourth_and_fifth_line(
+    datetimes: &[Result<DateTime<chrono::Utc>, anyhow::Error>],
+) -> String {
+    let mut res = format!("{:20}", "In UTC:".cyan());
+    for s in datetimes {
+        match s {
+            Ok(datetime) => res.push_str(&format!("{:30}", datetime.to_string().blue())),
+            Err(_) => res.push_str(&format!(
+                "{:30}",
+                "Couldn't interpret value".to_string().blue()
+            )),
+        }
+    }
+    res.push('\n');
+    res.push_str(&format!("{:20}", "In Local Timezone:".cyan()));
+    for s in datetimes {
+        match s {
+            Ok(datetime) => res.push_str(&format!(
+                "{:30}",
+                datetime.with_timezone(&Local).to_string().blue()
+            )),
+            Err(_) => res.push_str(&format!(
+                "{:30}",
+                "Couldn't interpret value".to_string().blue()
+            )),
+        }
+    }
+    res
+}
+
+#[allow(dead_code)]
 fn produce_output_string(time: &str, timestamp: i64, datetime: &DateTime<chrono::Utc>) -> String {
     format!(
         "{:20} {}\n{:20} {}\n{:20} {}\n{:20} {}",
@@ -80,14 +135,12 @@ fn produce_output_string(time: &str, timestamp: i64, datetime: &DateTime<chrono:
 fn main() -> Result<()> {
     let args = Args::parse();
     let times = convert_vector_inputs(&args.times);
-    let _datetimes = convert_vector_timestamp_to_datetime(&times);
+    let datetimes = convert_vector_timestamp_to_datetime(&times);
     let mut _s = String::new();
-    // let timestamp = get_timestamp_from_input(times[0])?;
-    // let datetime = get_datetime_from_timestamp(timestamp)?;
-    // println!(
-    //     "{}",
-    //     produce_output_string(&args.times, timestamp, &datetime)
-    // );
+    println!("{}", form_first_line(datetimes.len()));
+    println!("{}", form_second_line(&args.times));
+    println!("{}", form_third_line(&times));
+    println!("{}", form_fourth_and_fifth_line(&datetimes));
     Ok(())
 }
 
