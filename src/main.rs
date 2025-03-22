@@ -48,7 +48,9 @@ fn convert_vector_timestamp_to_datetime(
 fn get_datetime_from_timestamp(timestamp: i64) -> Result<DateTime<chrono::Utc>, anyhow::Error> {
     match DateTime::from_timestamp(timestamp, 0) {
         Some(d) => Ok(d),
-        None => Err(anyhow!("invalid number of seconds")),
+        None => Err(anyhow!(
+            "invalid number of seconds to convert to a valid datetime"
+        )),
     }
 }
 
@@ -68,7 +70,6 @@ fn form_second_line(times: &[String]) -> String {
     res
 }
 
-#[allow(dead_code)]
 fn form_third_line(timestamps: &[Result<i64, anyhow::Error>]) -> String {
     let mut res = format!("{:20}", "As timestamp:".cyan());
     for s in timestamps {
@@ -80,7 +81,6 @@ fn form_third_line(timestamps: &[Result<i64, anyhow::Error>]) -> String {
     res
 }
 
-#[allow(dead_code)]
 fn form_fourth_and_fifth_line(
     datetimes: &[Result<DateTime<chrono::Utc>, anyhow::Error>],
 ) -> String {
@@ -105,21 +105,6 @@ fn form_fourth_and_fifth_line(
     res
 }
 
-#[allow(dead_code)]
-fn produce_output_string(time: &str, timestamp: i64, datetime: &DateTime<chrono::Utc>) -> String {
-    format!(
-        "{:20} {}\n{:20} {}\n{:20} {}\n{:20} {}",
-        "Read:".cyan(),
-        time.blue(),
-        "As timestamp:".cyan(),
-        timestamp.to_string().blue(),
-        "In UTC:".cyan(),
-        datetime.to_string().blue(),
-        "In Local Timezone:".cyan(),
-        datetime.with_timezone(&Local).to_string().blue()
-    )
-}
-
 fn main() -> Result<()> {
     let args = Args::parse();
     let times = convert_vector_inputs(&args.times);
@@ -134,21 +119,6 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn test_produce_output_string() {
-        let time = "1213-123831231";
-        let timestamp: i64 = 1213123831231;
-        let datetime = DateTime::from_timestamp(timestamp, 0).unwrap();
-        let output = produce_output_string(time, timestamp, &datetime);
-
-        assert!(output.contains(&format!("{}", time.blue())));
-        assert!(output.contains(&format!("{}", timestamp.to_string().blue())));
-        assert!(output.contains(&format!(
-            "{}",
-            datetime.with_timezone(&Local).to_string().blue()
-        )));
-    }
 
     #[test]
     fn test_get_datetime_from_timestamp_with_valid_timestamp() {
